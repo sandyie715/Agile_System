@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Project Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-gradient {
+            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+        }
+
+        .status-pill {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .status-not-started { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .status-in-progress { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .status-completed { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+
+        .date-input {
+            background: transparent;
+            border: none;
+            font-size: 0.75rem;
+            color: #6b7280;
+            outline: none;
+            width: 100px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <!-- Premium Header -->
+        <header class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+            <div class="space-y-2">
+                <span class="text-blue-600 font-bold tracking-widest text-xs uppercase">Internal Workspace</span>
+                <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Project Hub</h1>
+                <p class="text-slate-500 max-w-md">Premium local tracking for your development lifecycle milestones.</p>
+            </div>
+            <button onclick="toggleModal(true)" class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Initialize New Project
+            </button>
+        </header>
+
+        <!-- Dynamic Content -->
+        <div id="project-container" class="space-y-8">
+            <!-- Projects will inject here -->
+            <div class="animate-pulse flex flex-col items-center py-20">
+                <div class="h-12 w-12 bg-slate-200 rounded-full mb-4"></div>
+                <div class="h-4 w-48 bg-slate-200 rounded"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8">
+            <h3 class="text-2xl font-bold text-slate-900 mb-6">Create Project</h3>
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Project Identity</label>
+                    <input type="text" id="p-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Enter high-level name...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Problem Statement</label>
+                    <textarea id="p-problem" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all" rows="3" placeholder="Describe the core objective..."></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="toggleModal(false)" class="px-6 py-3 text-slate-400 hover:text-slate-600 font-bold">Discard</button>
+                <button onclick="createProject()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 shadow-md">Create Instance</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://127.0.0.1:5000/api';
+        const STEPS = [
+            "Project Name", "Problem Statement", "Project Planning", 
+            "Backend Prototype", "Backend Modular", "Frontend Prototype", 
+            "Integration", "Testing"
+        ];
+
+        function toggleModal(show) {
+            document.getElementById('modal').classList.toggle('hidden', !show);
+        }
+
+        async function fetchProjects() {
+            try {
+                const res = await fetch(`${API}/projects`);
+                const data = await res.json();
+                render(data);
+            } catch (err) {
+                document.getElementById('project-container').innerHTML = `<div class="p-8 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-medium">System Offline: Ensure Python backend is running at :5000</div>`;
+            }
+        }
+
+        async function createProject() {
+            const name = document.getElementById('p-name').value;
+            const problem = document.getElementById('p-problem').value;
+            if (!name) return;
+
+            await fetch(`${API}/projects`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ projectName: name, problemStatement: problem, createdAt: new Date().toLocaleDateString() })
+            });
+            toggleModal(false);
+            fetchProjects();
+        }
+
+        async function update(id, step, field, value) {
+            const payload = { step };
+            payload[field] = value;
+            
+            await fetch(`${API}/projects/${id}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            fetchProjects();
+        }
+
+        function cycleStatus(id, step, current) {
+            const map = { "Not Started": "In Progress", "In Progress": "Completed", "Completed": "Not Started" };
+            update(id, step, 'status', map[current]);
+        }
+
+        function calculateProgress(p) {
+            let completed = 0;
+            STEPS.forEach(s => {
+                if (p[`${s}_status`] === 'Completed') completed++;
+            });
+            return Math.round((completed / STEPS.length) * 100);
+        }
+
+        function render(projects) {
+            const container = document.getElementById('project-container');
+            if (projects.length === 0) {
+                container.innerHTML = `<div class="text-center py-20 border-2 border-dashed border-slate-200 rounded-3xl text-slate-400">No active projects found.</div>`;
+                return;
+            }
+
+            container.innerHTML = projects.map(p => {
+                const progress = calculateProgress(p);
+                return `
+                    <div class="glass-card rounded-3xl p-8 relative overflow-hidden">
+                        <!-- Background Glow -->
+                        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50"></div>
+                        
+                        <div class="relative z-10">
+                            <!-- Header Info -->
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-1">
+                                        <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight">${p.name}</h2>
+                                        <span class="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-mono">#${p.id}</span>
+                                    </div>
+                                    <p class="text-slate-500 text-sm italic font-medium">${p.problem || 'Strategic blueprint in progress...'}</p>
+                                </div>
+                                
+                                <div class="w-full md:w-64">
+                                    <div class="flex justify-between items-end mb-2">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Global Progress</span>
+                                        <span class="text-xl font-black text-blue-600">${progress}%</span>
+                                    </div>
+                                    <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div class="h-full progress-gradient rounded-full transition-all duration-700" style="width: ${progress}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Steps Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                ${STEPS.map(step => {
+                                    const status = p[`${step}_status`];
+                                    const deadline = p[`${step}_deadline`] || "";
+                                    const statusClass = `status-${status.toLowerCase().replace(' ', '-')}`;
+                                    
+                                    return `
+                                        <div class="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 flex flex-col justify-between h-32">
+                                            <div class="flex justify-between items-start">
+                                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">${step}</span>
+                                                <div onclick="cycleStatus('${p.id}', '${step}', '${status}')" class="status-pill px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${statusClass}">
+                                                    ${status}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-auto">
+                                                <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Deadline</div>
+                                                <input 
+                                                    type="date" 
+                                                    value="${deadline}" 
+                                                    onchange="update('${p.id}', '${step}', 'deadline', this.value)"
+                                                    class="date-input"
+                                                >
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            <div class="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400 font-medium">
+                                <span>Instance Created: ${p.created_at}</span>
+                                <span class="flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Synchronized Locally
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.onload = fetchProjects;
+    </script>
+</body>
+</html>
